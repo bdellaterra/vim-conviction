@@ -174,10 +174,10 @@ function! CreateMenuItem( location, rhs, ... )
 endfunction
 
 
-" Copy working directory to the clipboard with mapping '<Leader>wd'
-call CreateMenuItem('&Extra',
-	\ ":silent! let @+=fnamemodify(bufname(''),':p:h')<CR>",
-	\ 'Copy working directory to clipboard', '', ['<Leader>wd'],
-	\ 'noremenu <silent>')
+" Add help entry for plugin under Help menu.
+function! s:CreatePluginHelpMenu( subject, helpTip )
+	call CreateMenuItem('&Help.Plugins', ':help ' . a:subject . '<CR>', a:helpTip,
+							\	'', '', 'anoremenu')
+endfunction
 
 
