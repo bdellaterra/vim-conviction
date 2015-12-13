@@ -181,3 +181,34 @@ function! conviction#CreatePluginHelpMenuItem( subject, helpTip )
 endfunction
 
 
+
+" Helper function to enable MenuMap command
+" NOTE: Parsing strings out of command-line is dubious and may only work with simple cases 
+function! MenuMap(cmdStr, ...)
+    let mode = get(a:000, 0, '')
+    let priority = get(a:000, 1, '')
+	let cmdStr = a:cmdStr
+    let cmdStr = substitute(cmdStr, '^\s*\d\+', '', '')    " Consume optional 'count' argument
+    let cmdStr = substitute(cmdStr, '^\s*\(.*\)\s*$', '\1', '')    " trim whitespace
+	let specialRegex = '\(\%(\s*<[^>]*>\)*\)\?'    " Regex for special menu/map arguments like <silent>
+	let menuRegex = '\s*\(\S*\)'    " Regex for menu path
+	let dquoteRegex = '\%("\%([^"]\|\\\@<="\)*"\)'    " Regex for single-quoted string
+	let squoteRegex = "\\%('\\%([^']\\|''\\)*'\\)"    " Regex for double-quoted string
+	let stringRegex = '\s*\(' . squoteRegex . '\|' . dquoteRegex . '\)'
+	let labelRegex = stringRegex
+	let helpRegex = stringRegex
+	let special = substitute(cmdStr, '^' . specialRegex . '.*', '\1', '')
+	let menu = '"' . escape(substitute(cmdStr, '^' . specialRegex . menuRegex . '.*', '\2', ''), '\"') . '"'
+	let label = substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . '.*', '\3', '')
+	let help = '[' . substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . helpRegex . '.*', '\4', '') . ']'
+	let rhs = '"' . escape(substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . helpRegex . '\s*\(.*\)', '\5', ''), '\"') . '"'
+	let maybeSubmenuLevels =  '0.0' . substitute(menu, '[^\.]', '', 'g')
+	let maybeSpecial = special == '' ? '' : substitute(special, '^\zs\ze\S', ' ', '')  " add leading space
+	let maybePriority = priority == '' ? ", ''" : ', "' . escape(maybeSubmenuLevels . priority, '\"') . '"'
+	let maybeMode = mode == '' ? '' : ', "' . escape(mode, '\"') . maybeSpecial . '"'
+	let createCmd = 'call  conviction#CreateMenuItem(' . menu . ', ' . rhs . ', ' . label . maybePriority . ', ' . help . maybeMode . ')'
+	exe createCmd
+endfunction
+
+exe 'command! -count=500 -complete=menu -nargs=+ MenuMap call MenuMap(<q-args>, "amenu", "<count>")'
+
