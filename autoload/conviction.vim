@@ -1,7 +1,7 @@
 " File:			conviction.vim
 " Description:	Create mappings and menu items simultaneously
 " Author:		Brian Dellatera <github.com/bdellaterra>
-" Version:		0.1
+" Version:		0.1.1
 " License:      Copyright 2015 Brian Dellaterra. This file is part of Conviction.
 " 				Distributed under the terms of the GNU Lesser General Public License.
 "				See the file LICENSE or <http://www.gnu.org/licenses/>.
@@ -18,7 +18,7 @@
 "
 " command:
 " The map command mode. (Ex. - 'vnoremap')
-function! MultiModeCmd( lhs, rhs, command )
+function! s:MultiModeCmd( lhs, rhs, command )
 	" Setup parameters
 	let [lhs, rhs, command] = [a:lhs, a:rhs, a:command]
 	" Pad 'lhs' with spaces
@@ -81,7 +81,7 @@ endfunction
 "
 " Example: 'nvinoremenu' will create non-recursive mappings for 'normal',
 "          'visual' and 'insert' mode.
-function! CreateMapping( lhs, rhs, ... )
+function! conviction#CreateMapping( lhs, rhs, ... )
 	" Setup parameters
 	let lhs = type(a:lhs) == type([]) ? a:lhs : [a:lhs]  " Coerce to list
 	let rhs = a:rhs
@@ -90,7 +90,7 @@ function! CreateMapping( lhs, rhs, ... )
 	for l in lhs
 		" Perform expansion of possible multi-mode command
 		" into a list of real Vim commands
-		let cmds = MultiModeCmd(l, rhs, command)
+		let cmds = s:MultiModeCmd(l, rhs, command)
 		" Execute each command in the  resulting list.
 		for c in cmds
 		  exe c
@@ -129,7 +129,7 @@ endfunction
 " Optional menu command used to create the menu item. Defaults to 'noremenu'.
 " Multi-mode menu commands are supported. (See CreateMapping() above
 " for details.)
-function! CreateMenuItem( location, rhs, ... )
+function! conviction#CreateMenuItem( location, rhs, ... )
 	" Setup parameters
 	let location = a:location
 	let rhs = a:rhs
@@ -142,7 +142,7 @@ function! CreateMenuItem( location, rhs, ... )
 		" Convert menu command to equivalent map command
 	    let mapCmd = substitute( command, '^\w*\zsmenu\>', 'map', 'i' )
 		" Call CreateMapping() using 'help' as the 'lhs'
-		call CreateMapping( helpArg, rhs, mapCmd )
+		call conviction#CreateMapping( helpArg, rhs, mapCmd )
 	endif
 	" Use only the first list item as the help tip.
 	let help = type(helpArg) == type([]) ? get( helpArg, 0, '' ) : helpArg
@@ -165,7 +165,7 @@ function! CreateMenuItem( location, rhs, ... )
 	if label == '' | throw "Invalid name for menu item" | endif
 	" Perform expansion of possible multi-mode command
 	" into a list of real Vim commands
-	let cmds = MultiModeCmd(' ' . priority . location . label . help . ' ',
+	let cmds = s:MultiModeCmd(' ' . priority . location . label . help . ' ',
 							\	rhs, command)
 	" Execute each command in the resulting list.
 	for c in cmds
@@ -175,8 +175,8 @@ endfunction
 
 
 " Add help entry for plugin under Help menu.
-function! s:CreatePluginHelpMenu( subject, helpTip )
-	call CreateMenuItem('&Help.Plugins', ':help ' . a:subject . '<CR>', a:helpTip,
+function! conviction#CreatePluginHelpMenuItem( subject, helpTip )
+	call conviction#CreateMenuItem('&Help.Plugins', ':help ' . a:subject . '<CR>', a:helpTip,
 							\	'', '', 'anoremenu')
 endfunction
 
