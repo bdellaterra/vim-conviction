@@ -181,10 +181,9 @@ function! conviction#CreatePluginHelpMenuItem( subject, helpTip )
 endfunction
 
 
-
-" Helper function to enable MenuMap command
+" Helper function to enable command-line MenuMap command
 " NOTE: Parsing strings out of command-line is dubious and may only work with simple cases 
-function! MenuMap(cmdStr, ...)
+function! conviction#MenuMap(cmdStr, ...)
     let mode = get(a:000, 0, '')
     let priority = get(a:000, 1, '')
 	let cmdStr = a:cmdStr
@@ -210,5 +209,55 @@ function! MenuMap(cmdStr, ...)
 	exe createCmd
 endfunction
 
-exe 'command! -count=500 -complete=menu -nargs=+ MenuMap call MenuMap(<q-args>, "amenu", "<count>")'
+" Returns unique items from a sorted list
+function! s:SortUnique(list)
+	let list = sort(deepcopy(a:list))
+	let i = 0
+	while i < len(list) - 1
+		if list[i] == list[i+1]
+			call remove(list, i+1)
+		endif
+		let i += 1
+	endwhile
+	return list
+endfunction
+
+" return a list containing all permutations of a given string
+function! conviction#Permutations(string, ...)
+	if len(a:string) <= 1
+		return [a:string]    " FUNCTION TERMINATION POINT
+	elseif len(a:string) == 2
+		let chars = split(a:string, '\zs')
+		let perms = chars + [a:string] + [join(reverse(chars), '')]
+		return s:SortUnique(perms)
+	else
+	    let perms = []
+		let chars = split(a:string, '\zs')
+		let i = 0
+		while i < len(chars)
+			let subPerms = []
+			let tail = deepcopy(chars)
+			let head = remove(tail, i)    " 'tail' is affected by the remove
+			for p in conviction#Permutations(join(tail, ''))
+				call add(subPerms, p)
+			endfor
+			let morePerms = map(deepcopy(subPerms), '"' . escape(head, '\"') . '" . v:val')
+			let perms = perms + subPerms + morePerms
+			let i += 1
+		endwhile
+		return s:SortUnique(perms)
+	endif
+endfunction
+
+let s:commandPermutations = conviction#Permutations('vico')
+let s:commandPermutations = ['a', 'n'] + map(deepcopy(s:commandPermutations), '"n" . v:val') + s:commandPermutations
+exe 'command! -count=500 -complete=menu -nargs=+ MenuMap call conviction#MenuMap(<q-args>, "menu", "<count>")'
+for s:mode in s:commandPermutations
+	" Normal Version
+	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'MenuMap'
+							\ .	' call conviction#MenuMap(<q-args>, "' . s:mode . 'menu", "<count>")'
+	" 'NoRe' version
+	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'NoReMenuMap'
+							\ .	' call conviction#MenuMap(<q-args>, "' . s:mode . 'noremenu", "<count>")'
+endfor
 
