@@ -182,9 +182,9 @@ function! conviction#CreatePluginHelpMenuItem( subject, helpTip )
 endfunction
 
 
-" Helper function to enable command-line MenuMap command
+" Helper function to enable command-line Menumap command
 " NOTE: Parsing strings out of command-line is dubious and may only work with simple cases 
-function! conviction#MenuMap(cmdStr, ...)
+function! conviction#Menumap(cmdStr, ...)
     let mode = get(a:000, 0, '')
     let priority = get(a:000, 1, '')
 	let cmdStr = a:cmdStr
@@ -197,15 +197,17 @@ function! conviction#MenuMap(cmdStr, ...)
 	let stringRegex = '\s*\(' . squoteRegex . '\|' . dquoteRegex . '\)'
 	let labelRegex = stringRegex
 	let helpRegex = stringRegex
+	let rhsRegex = '\s*\(.*\)'
+	" ...Note captures in regex definitions above
 	let special = substitute(cmdStr, '^' . specialRegex . '.*', '\1', '')
 	let menu = '"' . escape(substitute(cmdStr, '^' . specialRegex . menuRegex . '.*', '\2', ''), '\"') . '"'
 	let label = substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . '.*', '\3', '')
 	let help = '[' . substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . helpRegex . '.*', '\4', '') . ']'
-	let rhs = '"' . escape(substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . helpRegex . '\s*\(.*\)', '\5', ''), '\"') . '"'
-	let maybeSubmenuLevels =  '0.0' . substitute(menu, '[^\.]', '', 'g')
+	let rhs = '"' . escape(substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . helpRegex . rhsRegex, '\5', ''), '\"') . '"'    " Remainder of string is the 'rhs'
+	let maybeSubmenuLevels =  substitute(menu, '[^\.]', '', 'g')    " Grab one dot for each submenu level
 	let maybeSpecial = special == '' ? '' : substitute(special, '^\zs\ze\S', ' ', '')  " add leading space
-	let maybePriority = priority == '' ? ", ''" : ', "' . escape(maybeSubmenuLevels . priority, '\"') . '"'
-	let maybeMode = mode == '' ? '' : ', "' . escape(mode, '\"') . maybeSpecial . '"'
+	let maybePriority = priority == '' ? ", ''" : ', "' . escape(maybeSubmenuLevels . priority, '\"') . '"'    " Priority mode is required arg defaulting to empty string
+	let maybeMode = mode == '' ? '' : ', "' . escape(mode, '\"') . maybeSpecial . '"'    " Optional command-mode arg
 	let createCmd = 'call  conviction#CreateMenuItem(' . menu . ', ' . rhs . ', ' . label . maybePriority . ', ' . help . maybeMode . ')'
 	exe createCmd
 endfunction
@@ -252,13 +254,14 @@ endfunction
 
 let s:commandPermutations = conviction#Permutations('vico')
 let s:commandPermutations = ['a', 'n'] + map(deepcopy(s:commandPermutations), '"n" . v:val') + s:commandPermutations
-exe 'command! -count=500 -complete=menu -nargs=+ MenuMap call conviction#MenuMap(<q-args>, "menu", "<count>")'
+exe 'command! -count=500 -complete=menu -nargs=+ Menumap call conviction#Menumap(<q-args>, "menu", "<count>")'
+exe 'command! -count=500 -complete=menu -nargs=+ Noremenumap call conviction#Menumap(<q-args>, "noremenu", "<count>")'
 for s:mode in s:commandPermutations
 	" Normal Version
 	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'Menumap'
-							\ .	' call conviction#MenuMap(<q-args>, "' . s:mode . 'menu", "<count>")'
+							\ .	' call conviction#Menumap(<q-args>, "' . s:mode . 'menu", "<count>")'
 	" 'Nore' version
 	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'Noremenumap'
-							\ .	' call conviction#MenuMap(<q-args>, "' . s:mode . 'noremenu", "<count>")'
+							\ .	' call conviction#Menumap(<q-args>, "' . s:mode . 'noremenu", "<count>")'
 endfor
 
