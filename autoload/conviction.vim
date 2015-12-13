@@ -17,7 +17,8 @@
 " The right-hand-side component of a map command
 "
 " command:
-" The map command mode. (Ex. - 'vnoremap')
+" The map command mode. (Ex. - 'nvnoremap') If an 'n' is present for
+" normal-mode it must come first to disambiguate from 'noremap' commands
 function! s:MultiModeCmd( lhs, rhs, command )
 	" Setup parameters
 	let [lhs, rhs, command] = [a:lhs, a:rhs, a:command]
@@ -254,10 +255,10 @@ let s:commandPermutations = ['a', 'n'] + map(deepcopy(s:commandPermutations), '"
 exe 'command! -count=500 -complete=menu -nargs=+ MenuMap call conviction#MenuMap(<q-args>, "menu", "<count>")'
 for s:mode in s:commandPermutations
 	" Normal Version
-	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'MenuMap'
+	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'Menumap'
 							\ .	' call conviction#MenuMap(<q-args>, "' . s:mode . 'menu", "<count>")'
-	" 'NoRe' version
-	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'NoReMenuMap'
+	" 'Nore' version
+	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'Noremenumap'
 							\ .	' call conviction#MenuMap(<q-args>, "' . s:mode . 'noremenu", "<count>")'
 endfor
 
