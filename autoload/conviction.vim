@@ -191,7 +191,7 @@ function! conviction#Menumap(cmdStr, ...)
     let cmdStr = substitute(cmdStr, '^\s*\d\+', '', '')    " Consume optional 'count' argument
     let cmdStr = substitute(cmdStr, '^\s*\(.*\)\s*$', '\1', '')    " trim whitespace
 	let specialRegex = '\(\%(\s*<[^>]*>\)*\)\?'    " Regex for special menu/map arguments like <silent>
-	let menuRegex = '\s*\(\S*\)'    " Regex for menu path
+	let menuRegex = '\s*\(\%(\S\|\\\@<= \)*\)'    " Regex for menu path
 	let dquoteRegex = '\%("\%([^"]\|\\\@<="\)*"\)'    " Regex for single-quoted string
 	let squoteRegex = "\\%('\\%([^']\\|''\\)*'\\)"    " Regex for double-quoted string
 	let stringRegex = '\s*\(' . squoteRegex . '\|' . dquoteRegex . '\)'
@@ -204,13 +204,14 @@ function! conviction#Menumap(cmdStr, ...)
 	let label = substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . '.*', '\3', '')
 	let help = '[' . substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . helpRegex . '.*', '\4', '') . ']'
 	let rhs = '"' . escape(substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . helpRegex . rhsRegex, '\5', ''), '\"') . '"'    " Remainder of string is the 'rhs'
-	let maybeSubmenuLevels =  substitute(menu, '[^\.]', '', 'g')    " Grab one dot for each submenu level
+	let maybeSubmenuLevels =  repeat('0.', 1+count(split(menu, '\zs'), '.'))    " Build numeric sublevels (Actual number doesn't matter for predefined menu levels)
 	let maybeSpecial = special == '' ? '' : substitute(special, '^\zs\ze\S', ' ', '')  " add leading space
 	let maybePriority = priority == '' ? ", ''" : ', "' . escape(maybeSubmenuLevels . priority, '\"') . '"'    " Priority mode is required arg defaulting to empty string
 	let maybeMode = mode == '' ? '' : ', "' . escape(mode, '\"') . maybeSpecial . '"'    " Optional command-mode arg
 	let createCmd = 'call  conviction#CreateMenuItem(' . menu . ', ' . rhs . ', ' . label . maybePriority . ', ' . help . maybeMode . ')'
 	exe createCmd
 endfunction
+
 
 " Returns unique items from a sorted list
 function! s:SortUnique(list)
