@@ -17,8 +17,8 @@
 " The right-hand-side component of a map command
 "
 " command:
-" The map command mode. (Ex. - 'nvnoremap') If an 'n' is present for
-" normal-mode it must come first to disambiguate from 'noremap' commands
+" The map command mode. (Ex. - 'nvnoremap') If an 'n' is present for normal-mode
+" it must come first to disambiguate from the 'n' in 'noremap' commands
 function! s:MultiModeCmd( lhs, rhs, command )
 	" Setup parameters
 	let [lhs, rhs, command] = [a:lhs, a:rhs, a:command]
@@ -74,7 +74,7 @@ endfunction
 " Optional map command used to create the mapping. Defaults to 'noremap'.
 " New commands 'amap' and 'anoremap' are also supported as a matter of
 " convenience.  These function similar to the amenu commands,
-" inserting/appending the characters for each mode.
+" inserting/appending characters for each mode.
 "
 " Instead of 'amap', a command starting with 'n' and followed by any of
 " 'v','i','c' or 'o' can be given. This will behave similarly to 'amap' but
@@ -103,7 +103,8 @@ endfunction
 " Create a new menu item.
 "
 " location:
-" A path identifying where the new item will be listed
+" A path identifying where the new item will be listed. For convenience,
+" spaces are escaped, but no other special characters are handled.
 "
 " rhs:
 " A string of characters that will occur when the menu item is invoked.
@@ -132,7 +133,7 @@ endfunction
 " for details.)
 function! conviction#CreateMenuItem( location, rhs, ... )
 	" Setup parameters
-	let location = a:location
+	let location = escape( a:location, ' ' )    " Escaping spaces
 	let rhs = a:rhs
 	let label = escape( get( a:000, 0, '' ), ' ' )    " Escaping spaces
 	let priority = get( a:000, 1, '' )
@@ -173,43 +174,69 @@ function! conviction#CreateMenuItem( location, rhs, ... )
 	  exe c
 	endfor
 endfunction
+ 
 
+" Define Regexes
+let s:regex = {}
+let s:regex.count = '^\s*\d\+'    " Optional 'count' argument
+let s:regex.trim = '^\s*\(.*\)\s*$'
+let s:regex.special = '\(\%(\s*<[^>]*>\)*\)\?'    " Regex for special menu/map arguments like <silent>
+let s:regex.menu = '\s*\(\%(\S\|\\\@<= \)*\)'    " Regex for menu path
+let s:regex.dquote = '\%("\%([^"]\|\\\@<="\)*"\)'    " Regex for double-quoted string
+let s:regex.squote = "\\%('\\%([^']\\|''\\)*'\\)"    " Regex for single-quoted string
+let s:regex.string = '\s*\(' . s:regex.squote . '\|' . s:regex.dquote . '\)'
+let s:regex.label = s:regex.string
+let s:regex.help = s:regex.string
+let s:regex.lhs = '\s*\(\S\+\)'    " FIXME: Need more robust regex for lhs
+let s:regex.rhs = '\s*\(.*\)'
 
-" Add help entry for plugin under Help menu.
-function! conviction#CreatePluginHelpMenuItem( subject, helpTip )
-	call conviction#CreateMenuItem('&Help.Plugins', ':help ' . a:subject . '<CR>', a:helpTip,
-							\	'', '', 'anoremenu')
-endfunction
-
-
-" Helper function to enable command-line Menumap command
+" Helper function to enable command-line [NVICO]Menumap command
 " NOTE: Parsing strings out of command-line is dubious and may only work with simple cases 
-function! conviction#Menumap(cmdStr, ...)
+function! conviction#CmdMenumap(cmdStr, ...)
     let mode = get(a:000, 0, '')
     let priority = get(a:000, 1, '')
+    let createMaps = get(a:000, 2, 1)
 	let cmdStr = a:cmdStr
-    let cmdStr = substitute(cmdStr, '^\s*\d\+', '', '')    " Consume optional 'count' argument
-    let cmdStr = substitute(cmdStr, '^\s*\(.*\)\s*$', '\1', '')    " trim whitespace
-	let specialRegex = '\(\%(\s*<[^>]*>\)*\)\?'    " Regex for special menu/map arguments like <silent>
-	let menuRegex = '\s*\(\%(\S\|\\\@<= \)*\)'    " Regex for menu path
-	let dquoteRegex = '\%("\%([^"]\|\\\@<="\)*"\)'    " Regex for single-quoted string
-	let squoteRegex = "\\%('\\%([^']\\|''\\)*'\\)"    " Regex for double-quoted string
-	let stringRegex = '\s*\(' . squoteRegex . '\|' . dquoteRegex . '\)'
-	let labelRegex = stringRegex
-	let helpRegex = stringRegex
-	let rhsRegex = '\s*\(.*\)'
-	" ...Note captures in regex definitions above
-	let special = substitute(cmdStr, '^' . specialRegex . '.*', '\1', '')
-	let menu = '"' . escape(substitute(cmdStr, '^' . specialRegex . menuRegex . '.*', '\2', ''), '\"') . '"'
-	let label = substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . '.*', '\3', '')
-	let help = '[' . substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . helpRegex . '.*', '\4', '') . ']'
-	let rhs = '"' . escape(substitute(cmdStr, '^' . specialRegex . menuRegex . labelRegex . helpRegex . rhsRegex, '\5', ''), '\"') . '"'    " Remainder of string is the 'rhs'
+    let cmdStr = substitute(cmdStr, s:regex.count, '', '')    " Consume optional 'count' argument
+    let cmdStr = substitute(cmdStr, s:regex.trim, '\1', '')    " trim whitespace
+	let helpListStart = createMaps ? '[' : ''
+	let helpListEnd = createMaps ? ']' : ''
+	" (...Note that submatch captures occur in s:regex entries defined above)
+	let special = substitute(cmdStr, '^' . s:regex.special . '.*', '\1', '')
+	let menu = '"' . escape(substitute(cmdStr, '^' . s:regex.special . s:regex.menu . '.*', '\2', ''), '\"') . '"'
+	let label = substitute(cmdStr, '^' . s:regex.special . s:regex.menu . s:regex.label . '.*', '\3', '')
+	let help = helpListStart . substitute(cmdStr, '^' . s:regex.special . s:regex.menu . s:regex.label . s:regex.help . '.*', '\4', '') . helpListEnd
+	let rhs = '"' . escape(substitute(cmdStr, '^' . s:regex.special . s:regex.menu . s:regex.label . s:regex.help . s:regex.rhs, '\5', ''), '\"') . '"'    " Remainder of string is the 'rhs'
 	let maybeSubmenuLevels =  repeat('0.', 1+count(split(menu, '\zs'), '.'))    " Build numeric sublevels (Actual number doesn't matter for predefined menu levels)
 	let maybeSpecial = special == '' ? '' : substitute(special, '^\zs\ze\S', ' ', '')  " add leading space
 	let maybePriority = priority == '' ? ", ''" : ', "' . escape(maybeSubmenuLevels . priority, '\"') . '"'    " Priority mode is required arg defaulting to empty string
 	let maybeMode = mode == '' ? '' : ', "' . escape(mode, '\"') . maybeSpecial . '"'    " Optional command-mode arg
 	let createCmd = 'call  conviction#CreateMenuItem(' . menu . ', ' . rhs . ', ' . label . maybePriority . ', ' . help . maybeMode . ')'
 	exe createCmd
+endfunction
+
+
+" Helper function to enable command-line [NVICO]Menu commands
+" NOTE: Parsing strings out of command-line is dubious and may only work with simple cases 
+function! conviction#CmdMenu(cmdStr, ...)
+    let mode = get(a:000, 0, '')
+    let priority = get(a:000, 1, '')
+	let cmdStr = a:cmdStr
+    let createMaps = 0
+	call conviction#CmdMenumap(a:cmdStr, mode, priority, createMaps)
+endfunction
+
+
+" Helper function to enable command-line [NVICO]Map commands
+" NOTE: Parsing strings out of command-line is dubious and may only work with simple cases 
+function! conviction#CmdMap(cmdStr, ...)
+    let mode = get(a:000, 0, '')
+	let cmdStr = a:cmdStr
+	" (...Note that submatch captures occur in s:regex entries defined above)
+	" let special = substitute(cmdStr, '^' . s:regex.special . '.*', '\1', '')
+	let lhs = substitute(cmdStr, '^' . s:regex.lhs . '.*', '\1', '')    " TODO: Deal w/ special map mods? Need to escape anything?
+	let rhs = substitute(cmdStr, '^' . s:regex.lhs . s:regex.rhs, '\2', '')    " Remainder of string is the 'rhs'
+	call conviction#CreateMapping(lhs, rhs, mode)
 endfunction
 
 
@@ -226,14 +253,15 @@ function! s:SortUnique(list)
 	return list
 endfunction
 
-" return a list containing all permutations of a given string
+
+" Return a list containing all permutations of a given string
 function! conviction#Permutations(string, ...)
 	if len(a:string) <= 1
-		return [a:string]    " FUNCTION TERMINATION POINT
+		return [a:string]    " RETURN
 	elseif len(a:string) == 2
 		let chars = split(a:string, '\zs')
 		let perms = chars + [a:string] + [join(reverse(chars), '')]
-		return s:SortUnique(perms)
+		return s:SortUnique(perms)    " RETURN
 	else
 	    let perms = []
 		let chars = split(a:string, '\zs')
@@ -253,16 +281,41 @@ function! conviction#Permutations(string, ...)
 	endif
 endfunction
 
+
+" Generate menu/map commands
 let s:commandPermutations = conviction#Permutations('vico')
 let s:commandPermutations = ['a', 'n'] + map(deepcopy(s:commandPermutations), '"n" . v:val') + s:commandPermutations
-exe 'command! -count=500 -complete=menu -nargs=+ Menumap call conviction#Menumap(<q-args>, "menu", "<count>")'
-exe 'command! -count=500 -complete=menu -nargs=+ Noremenumap call conviction#Menumap(<q-args>, "noremenu", "<count>")'
+
+exe 'command! -count=500 -complete=menu -nargs=+ Menumap call conviction#CmdMenumap(<q-args>, "menu", "<count>")'
+exe 'command! -count=500 -complete=menu -nargs=+ Noremenumap call conviction#CmdMenumap(<q-args>, "noremenu", "<count>")'
 for s:mode in s:commandPermutations
 	" Normal Version
 	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'Menumap'
-							\ .	' call conviction#Menumap(<q-args>, "' . s:mode . 'menu", "<count>")'
+							\ .	' call conviction#CmdMenumap(<q-args>, "' . s:mode . 'menu", "<count>")'
 	" 'Nore' version
 	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'Noremenumap'
-							\ .	' call conviction#Menumap(<q-args>, "' . s:mode . 'noremenu", "<count>")'
+							\ .	' call conviction#CmdMenumap(<q-args>, "' . s:mode . 'noremenu", "<count>")'
+endfor
+
+exe 'command! -count=500 -complete=menu -nargs=+ Menu call conviction#CmdMenu(<q-args>, "menu", "<count>")'
+exe 'command! -count=500 -complete=menu -nargs=+ Noremenu call conviction#CmdMenu(<q-args>, "noremenu", "<count>")'
+for s:mode in s:commandPermutations
+	" Normal Version
+	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'Menu'
+							\ .	' call conviction#CmdMenu(<q-args>, "' . s:mode . 'menu", "<count>")'
+	" 'Nore' version
+	exe 'command! -count=500 -complete=menu -nargs=+ ' . toupper(s:mode) . 'Noremenu'
+							\ .	' call conviction#CmdMenu(<q-args>, "' . s:mode . 'noremenu", "<count>")'
+endfor
+
+exe 'command! -complete=mapping -nargs=+ Map call conviction#CmdMap(<q-args>, "map")'
+exe 'command! -complete=mapping -nargs=+ Noremap call conviction#CmdMap(<q-args>, "noremap")'
+for s:mode in s:commandPermutations
+	" Normal Version
+	exe 'command! -complete=mapping -nargs=+ ' . toupper(s:mode) . 'Map'
+							\ .	' call conviction#CmdMap(<q-args>, "' . s:mode . 'map")'
+	" 'Nore' version
+	exe 'command! -complete=mapping -nargs=+ ' . toupper(s:mode) . 'Noremap'
+							\ .	' call conviction#CmdMap(<q-args>, "' . s:mode . 'noremap")'
 endfor
 
