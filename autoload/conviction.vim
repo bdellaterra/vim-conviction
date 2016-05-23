@@ -181,7 +181,7 @@ let s:regex = {}
 let s:regex.count = '^\s*\d\+'    " Optional 'count' argument
 let s:regex.trim = '^\s*\(.*\)\s*$'
 let s:regex.special = '\(\%(\s*<[^>]*>\)*\)\?'    " Regex for special menu/map arguments like <silent>
-let s:regex.menu = '\s*\(\%(\S\|\\\@<= \)*\)'    " Regex for menu path
+let s:regex.menu = '\s*\(\%(\%(\\ \)\|\S\)*\)'    " Regex for menu path
 let s:regex.dquote = '\%("\%([^"]\|\\\@<="\)*"\)'    " Regex for double-quoted string
 let s:regex.squote = "\\%('\\%([^']\\|''\\)*'\\)"    " Regex for single-quoted string
 let s:regex.string = '\s*\(' . s:regex.squote . '\|' . s:regex.dquote . '\)'
@@ -203,7 +203,7 @@ function! conviction#CmdMenumap(cmdStr, ...)
 	let helpListEnd = createMaps ? ']' : ''
 	" (...Note that submatch captures occur in s:regex entries defined above)
 	let special = substitute(cmdStr, '^' . s:regex.special . '.*', '\1', '')
-	let menu = '"' . escape(substitute(cmdStr, '^' . s:regex.special . s:regex.menu . '.*', '\2', ''), '\"') . '"'
+	let menu = '"' . escape(substitute(cmdStr, '^' . s:regex.special . s:regex.menu . '.*', '\2', ''), '"') . '"'
 	let label = substitute(cmdStr, '^' . s:regex.special . s:regex.menu . s:regex.label . '.*', '\3', '')
 	let help = helpListStart . substitute(cmdStr, '^' . s:regex.special . s:regex.menu . s:regex.label . s:regex.help . '.*', '\4', '') . helpListEnd
 	let rhs = '"' . escape(substitute(cmdStr, '^' . s:regex.special . s:regex.menu . s:regex.label . s:regex.help . s:regex.rhs, '\5', ''), '\"') . '"'    " Remainder of string is the 'rhs'
