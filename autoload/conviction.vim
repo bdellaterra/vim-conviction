@@ -319,3 +319,12 @@ for s:mode in s:commandPermutations
 							\ .	' call conviction#CmdMap(<q-args>, "' . s:mode . 'noremap")'
 endfor
 
+
+" Define the Ex-mode commands such as ANoremenumap
+" (Without this the first command invocation may fail with an error)
+" NOTE: Calling any autoload-function will source this script,
+" thus defining the Ex commands with no additional work required.
+function conviction#DefineExCommands()
+	return
+endfunction
+
