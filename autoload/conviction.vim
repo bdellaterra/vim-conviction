@@ -7,6 +7,13 @@
 "				See the file LICENSE or <http://www.gnu.org/licenses/>.
 
 
+" Guard against repeat sourcing of this script
+if exists('g:loaded_convictionPlugin')
+	finish
+end
+let g:loaded_convictionPlugin = 1
+
+
 " Helper function to convert multi-mode map/menu commands
 " to a list of equivalent real commands.
 "
